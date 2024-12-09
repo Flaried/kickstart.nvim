@@ -160,11 +160,30 @@ vim.opt.scrolloff = 10
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
 
+-- Definition in vertical split
+vim.keymap.set('n', '<leader>v', '<cmd>vsplit | lua vim.lsp.buf.definition()<cr>', { desc = 'Goto Definition in Vertical Split' })
+
+-- make new st terminal in the working directory and disown it
+
+vim.keymap.set('n', '<leader>d', function()
+  vim.fn.jobstart('st', { detach = true })
+end, { desc = 'Open a new st terminal and disown it' })
+
+-- Move lines
 vim.keymap.set('v', 'J', ":m '>+1<CR>gv=gv")
 vim.keymap.set('v', 'K', ":m '<-2<CR>gv=gv")
+
+-- Clipboard
 vim.keymap.set({ 'n', 'v' }, '<leader>y', [["+y]], { desc = 'Copy to clipboard' })
 vim.keymap.set('n', '<leader>Y', [["+Y]], { desc = 'Copy to clipboard' })
+
+-- File explorer
 vim.keymap.set('n', '<leader>pv', vim.cmd.Ex)
+
+-- Tabs
+vim.keymap.set('n', '<leader>gt', '<cmd>tabe .<CR>')
+vim.keymap.set('n', '<leader>gh', '<cmd>tabprevious<CR>')
+vim.keymap.set('n', '<leader>gl', '<cmd>tabnext<CR>')
 
 -- Clear highlights on search when pressing <Esc> in normal mode
 --  See `:help hlsearch`
@@ -187,10 +206,10 @@ vim.diagnostic.config { virtual_lines = { highlight_whole_line = false, highligh
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 -- TIP: Disable arrow keys in normal mode
--- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
--- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
--- vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
--- vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
+vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
+vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
+vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
+vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 
 -- Keybinds to make split navigation easier.
 --  Use CTRL+<hjkl> to switch between windows
@@ -267,11 +286,105 @@ require('lazy').setup({
     },
   },
 
+  -- toggle comments
+  {
+    'terrortylor/nvim-comment',
+    config = function()
+      require('nvim_comment').setup {
+        operator_mapping = '<leader>/',
+      } -- NOTE: Underscore is correct here
+    end,
+  },
+
+  -- COPILOT AI AUTO COMPLETE
+  {
+    'github/copilot.vim',
+  },
+
+  -- Discord RPC
+  {
+    'vyfor/cord.nvim',
+    build = './build || .\\build',
+    event = 'VeryLazy',
+    opts = {}, -- calls require('cord').setup()
+    config = function()
+      require('cord').setup {
+        usercmds = true, -- Enable user commands
+        log_level = 'error', -- One of 'trace', 'debug', 'info', 'warn', 'error', 'off'
+        timer = {
+          interval = 1500, -- Interval between presence updates in milliseconds (min 500)
+          reset_on_idle = false, -- Reset start timestamp on idle
+          reset_on_change = false, -- Reset start timestamp on presence change
+        },
+        editor = {
+          image = nil, -- Image ID or URL in case a custom client id is provided
+          client = 'neovim', -- vim, neovim, lunarvim, nvchad, astronvim or your application's client id
+          tooltip = 'The Text Editor', -- Text to display when hovering over the editor's image
+        },
+        display = {
+          show_time = true, -- Display start timestamp
+          show_repository = true, -- Display 'View repository' button linked to repository url, if any
+          show_cursor_position = false, -- Display line and column number of cursor's position
+          swap_fields = false, -- If enabled, workspace is displayed first
+          swap_icons = false, -- If enabled, editor is displayed on the main image
+          workspace_blacklist = {}, -- List of workspace names that will hide rich presence
+        },
+        lsp = {
+          show_problem_count = false, -- Display number of diagnostics problems
+          severity = 1, -- 1 = Error, 2 = Warning, 3 = Info, 4 = Hint
+          scope = 'workspace', -- buffer or workspace
+        },
+        idle = {
+          enable = true, -- Enable idle status
+          show_status = true, -- Display idle status, disable to hide the rich presence on idle
+          timeout = 300000, -- Timeout in milliseconds after which the idle status is set, 0 to display immediately
+          disable_on_focus = false, -- Do not display idle status when neovim is focused
+          text = 'Idle', -- Text to display when idle
+          tooltip = '💤', -- Text to display when hovering over the idle image
+        },
+        text = {
+          viewing = 'Viewing {}', -- Text to display when viewing a readonly file
+          editing = 'Editing {}', -- Text to display when editing a file
+          file_browser = 'Browsing files', -- Text to display when browsing files (Empty string to disable)
+          plugin_manager = 'Managing plugins in {}', -- Text to display when managing plugins (Empty string to disable)
+          lsp_manager = 'Configuring LSP in {}', -- Text to display when managing LSP servers (Empty string to disable)
+          vcs = 'Committing changes in {}', -- Text to display when using Git or Git-related plugin (Empty string to disable)
+          workspace = 'In {}', -- Text to display when in a workspace (Empty string to disable)
+        },
+        buttons = {
+          {
+            label = 'View Repository', -- Text displayed on the button
+            url = 'git', -- URL where the button leads to ('git' = automatically fetch Git repository URL)
+          },
+          -- {
+          --   label = 'View Plugin',
+          --   url = 'https://github.com/vyfor/cord.nvim',
+          -- }
+        },
+        assets = nil, -- Custom file icons, see the wiki*
+        -- assets = {
+        --   lazy = {                                 -- Vim filetype or file name or file extension = table or string
+        --     name = 'Lazy',                         -- Optional override for the icon name, redundant for language types
+        --     icon = 'https://example.com/lazy.png', -- Rich Presence asset name or URL
+        --     tooltip = 'lazy.nvim',                 -- Text to display when hovering over the icon
+        --     type = 'plugin_manager',               -- One of 'language', 'file_browser', 'plugin_manager', 'lsp_manager', 'vcs' or respective ordinals; defaults to 'language'
+        --   },
+        --   ['Cargo.toml'] = 'crates',
+        -- },
+      }
+    end,
+  },
   -- undotree
   {
     'mbbill/undotree',
     config = function()
       vim.keymap.set('n', '<leader>u', vim.cmd.UndotreeToggle, { desc = 'Open undo tree' })
+      if vim.fn.has 'persistent_undo' == 1 then
+        -- Set undo directory
+        vim.opt.undodir = vim.fn.expand '~/.config/nvim/undodir'
+        -- Enable undo file
+        vim.opt.undofile = true
+      end
     end,
   },
   -- lsp-lines bc normal are so ugly
@@ -281,6 +394,7 @@ require('lazy').setup({
       require('lsp_lines').setup()
     end,
   },
+
   -- harpoon
   {
     'ThePrimeagen/harpoon',
@@ -313,22 +427,28 @@ require('lazy').setup({
       vim.keymap.set('n', '<C-e>', function()
         toggle_telescope(harpoon:list())
       end, { desc = 'Open harpoon window' })
-      vim.keymap.set('n', 'ha', function()
+
+      vim.keymap.set('n', '<leader>ha', function()
         harpoon:list():add()
       end, { desc = 'Append to harpoon' })
-      vim.keymap.set('n', 'hx', function()
+
+      vim.keymap.set('n', '<leader>hx', function()
         harpoon:list():remove()
       end, { desc = 'Remove harpoon' })
-      vim.keymap.set('n', 'h1', function()
+
+      vim.keymap.set('n', '<leader>h1', function()
         harpoon:list():select(1)
       end, { desc = 'Switch to first window' })
-      vim.keymap.set('n', 'h2', function()
+
+      vim.keymap.set('n', '<leader>h2', function()
         harpoon:list():select(2)
       end, { desc = 'Switch to second window' })
-      vim.keymap.set('n', 'h3', function()
+
+      vim.keymap.set('n', '<leader>h3', function()
         harpoon:list():select(3)
       end, { desc = 'Switch to third window' })
-      vim.keymap.set('n', 'h4', function()
+
+      vim.keymap.set('n', '<leader>h4', function()
         harpoon:list():select(4)
       end, { desc = 'Switch to fourth window' })
 
@@ -397,11 +517,13 @@ require('lazy').setup({
       spec = {
         { '<leader>c', group = '[C]ode', mode = { 'n', 'x' } },
         { '<leader>d', group = '[D]ocument' },
+        { '<leader>h', group = '[H]arpoon' },
         { '<leader>r', group = '[R]ename' },
         { '<leader>s', group = '[S]earch' },
+        { '<leader>g', group = 'Tabs' },
         { '<leader>w', group = '[W]orkspace' },
         { '<leader>t', group = '[T]oggle' },
-        { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
+        --{ '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
       },
     },
   },
@@ -834,7 +956,6 @@ require('lazy').setup({
       local cmp = require 'cmp'
       local luasnip = require 'luasnip'
       luasnip.config.setup {}
-
       cmp.setup {
         snippet = {
           expand = function(args)
@@ -1004,7 +1125,7 @@ require('lazy').setup({
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
   -- require 'kickstart.plugins.debug',
-  -- require 'kickstart.plugins.indent_line',
+  require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
   -- require 'kickstart.plugins.autopairs',
   require 'kickstart.plugins.neo-tree',

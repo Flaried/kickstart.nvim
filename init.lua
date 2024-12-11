@@ -672,9 +672,12 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
-      vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
+      vim.keymap.set('n', '<leader>sD', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
+      vim.keymap.set('n', '<leader>sr', require('telescope.builtin').lsp_references, { desc = '[S]earch [R]eferences' })
+      vim.keymap.set('n', '<leader>si', require('telescope.builtin').lsp_implementations, { desc = '[S]earch [I]mplementations' })
+
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
 
       -- Slightly advanced example of overriding default behavior and theme
@@ -782,31 +785,41 @@ require('lazy').setup({
           -- Jump to the definition of the word under your cursor.
           --  This is where a variable was first declared, or where a function is defined, etc.
           --  To jump back, press <C-t>.
-          map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
 
-          -- Find references for the word under your cursor.
-          map('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
+          -- Jump to the definition of the word under your cursor in a vertical split.
+          map('gd', function()
+            require('telescope.builtin').lsp_definitions()
+          end, '[G]oto [D]efinition')
 
-          -- Jump to the implementation of the word under your cursor.
-          --  Useful when your language has ways of declaring types without an actual implementation.
-          map('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
+          -- Find references for the word under your cursor in a vertical split.
+          map('gr', function()
+            vim.cmd 'vsplit'
+            require('telescope.builtin').lsp_references()
+          end, '[G]oto [R]eferences')
 
-          -- Jump to the type of the word under your cursor.
-          --  Useful when you're not sure what type a variable is and you want to see
-          --  the definition of its *type*, not where it was *defined*.
-          map('<leader>D', require('telescope.builtin').lsp_type_definitions, 'Type [D]efinition')
+          -- Jump to the implementation of the word under your cursor in a vertical split.
+          map('gI', function()
+            vim.cmd 'vsplit'
+            require('telescope.builtin').lsp_implementations()
+          end, '[G]oto [I]mplementation')
 
-          -- Fuzzy find all the symbols in your current document.
-          --  Symbols are things like variables, functions, types, etc.
-          map('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
+          -- Jump to the type of the word under your cursor in a vertical split.
+          map('<leader>D', function()
+            vim.cmd 'vsplit'
+            require('telescope.builtin').lsp_type_definitions()
+          end, 'Type [D]efinition')
 
-          -- Fuzzy find all the symbols in your current workspace.
-          --  Similar to document symbols, except searches over your entire project.
-          map('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
+          -- Fuzzy find all the symbols in your current document in a vertical split.
+          map('<leader>ds', function()
+            vim.cmd 'vsplit'
+            require('telescope.builtin').lsp_document_symbols()
+          end, '[D]ocument [S]ymbols')
 
-          -- Rename the variable under your cursor.
-          --  Most Language Servers support renaming across files, etc.
-          map('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
+          -- Fuzzy find all the symbols in your current workspace in a vertical split.
+          map('<leader>ws', function()
+            vim.cmd 'vsplit'
+            require('telescope.builtin').lsp_dynamic_workspace_symbols()
+          end, '[W]orkspace [S]ymbols')
 
           -- Execute a code action, usually your cursor needs to be on top of an error
           -- or a suggestion from your LSP for this to activate.
@@ -898,6 +911,11 @@ require('lazy').setup({
                 wrapAttributes = 'auto', -- Options: 'auto', 'force', 'force-aligned', 'force-expand-multiline'
               },
             },
+          },
+          configurationSection = { 'html', 'css', 'javascript' }, -- Specify configuration sections
+          embeddedLanguages = {
+            css = true, -- Enable embedded CSS support
+            javascript = true, -- Enable embedded JavaScript support
           },
         },
 
@@ -1171,7 +1189,7 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'html' },
+      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'html', 'javascript' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {

@@ -1,4 +1,5 @@
 tags
+undodir/
 test.sh
 .luarc.json
 nvim

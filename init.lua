@@ -640,22 +640,26 @@ require('lazy').setup({
       -- [[ Configure Telescope ]]
       -- See `:help telescope` and `:help telescope.setup()`
       require('telescope').setup {
-        -- You can put your default mappings / updates / etc. in here
-        --  All the info you're looking for is in `:help telescope.setup()`
-        --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
-        -- pickers = {}
+        defaults = {
+          mappings = {
+            i = {
+              -- 'i' for insert mode
+              ['<C-j>'] = 'move_selection_next', -- Move down
+              ['<C-k>'] = 'move_selection_previous', -- Move up
+            },
+            n = {
+              -- 'n' for normal mode
+              ['<C-j>'] = 'move_selection_next', -- Move down
+              ['<C-k>'] = 'move_selection_previous', -- Move up
+            },
+          },
+        },
         extensions = {
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
           },
         },
       }
-
       -- Enable Telescope extensions if they are installed
       pcall(require('telescope').load_extension, 'fzf')
       pcall(require('telescope').load_extension, 'ui-select')

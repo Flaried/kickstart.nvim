@@ -286,6 +286,16 @@ require('lazy').setup({
     },
   },
 
+  -- not sure what this does i thought this would fix my indents
+  {
+    'windwp/nvim-autopairs',
+    config = function()
+      require('autopairs').setup {
+        event = 'InsertEnter',
+      } --
+    end,
+  },
+
   -- toggle comments
   {
     'terrortylor/nvim-comment',
@@ -299,6 +309,19 @@ require('lazy').setup({
   -- COPILOT AI AUTO COMPLETE
   {
     'github/copilot.vim',
+  },
+
+  {
+    'CopilotC-Nvim/CopilotChat.nvim',
+    dependencies = {
+      { 'github/copilot.vim' }, -- or zbirenbaum/copilot.lua
+      { 'nvim-lua/plenary.nvim', branch = 'master' }, -- for curl, log and async functions
+    },
+    build = 'make tiktoken', -- Only on MacOS or Linux
+    opts = {
+      -- See Configuration section for options
+    },
+    -- See Commands section for default commands if you want to lazy load on them
   },
 
   -- Discord RPC
@@ -825,6 +848,20 @@ require('lazy').setup({
         -- ts_ls = {},
         --
 
+        -- Fix HTML formatting and indent being ugly
+        html = {
+          settings = {
+            html = {
+              format = {
+                enable = true, -- Enable formatting
+                indentInnerHtml = true, -- Indent <head> and <body> sections
+                wrapLineLength = 120,
+                wrapAttributes = 'auto', -- Options: 'auto', 'force', 'force-aligned', 'force-expand-multiline'
+              },
+            },
+          },
+        },
+
         lua_ls = {
           -- cmd = {...},
           -- filetypes = { ...},
@@ -1095,7 +1132,7 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'html' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -1127,7 +1164,7 @@ require('lazy').setup({
   -- require 'kickstart.plugins.debug',
   require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
-  -- require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.autopairs',
   require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 

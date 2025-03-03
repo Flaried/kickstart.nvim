@@ -4,6 +4,8 @@ return {
     -- Enable `lukas-reineke/indent-blankline.nvim`
     -- See `:help ibl`
     main = 'ibl',
-    opts = {},
+    opts = {
+      indent = { highlight = nil}, -- Makes indent lines use the 'Comment' color
+    },
   },
 }

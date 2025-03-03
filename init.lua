@@ -17,7 +17,7 @@
 ========       /:::========|  |==hjkl==:::\  \ required \    ========
 ========      '""""""""""""'  '""""""""""""'  '""""""""""'   ========
 ========                                                     ========
-=====================================================================
+====================================================================
 =====================================================================
 
 What is Kickstart?
@@ -161,13 +161,74 @@ vim.opt.scrolloff = 10
 --  See `:help vim.keymap.set()`
 
 -- Definition in vertical split
-vim.keymap.set('n', '<leader>v', '<cmd>vsplit | lua vim.lsp.buf.definition()<cr>', { desc = 'Goto Definition in Vertical Split' })
+vim.keymap.set('n', '<leader>v', '<cmd>vsplit | lua vim.lsp.buf.definition()<cr>',
+  { desc = 'Goto Definition in Vertical Split' })
 
 -- make new st terminal in the working directory and disown it
-
 vim.keymap.set('n', '<leader>d', function()
   vim.fn.jobstart('st', { detach = true })
 end, { desc = 'Open a new st terminal and disown it' })
+
+-- Floating term
+
+local state = {
+  floating = {
+    buf = -1,
+    win = -1,
+  }
+}
+
+local function create_floating_window(opts)
+  opts = opts or {}
+  local width = opts.width or math.floor(vim.o.columns * 0.8)
+  local height = opts.height or math.floor(vim.o.lines * 0.8)
+
+  -- Calculate the position to center the window
+  local col = math.floor((vim.o.columns - width) / 2)
+  local row = math.floor((vim.o.lines - height) / 2)
+
+  -- Create a buffer
+  local buf = nil
+  if vim.api.nvim_buf_is_valid(opts.buf) then
+    buf = opts.buf
+  else
+    buf = vim.api.nvim_create_buf(false, true) -- No file, scratch buffer
+  end
+
+  -- Define window configuration
+  local win_config = {
+    relative = "editor",
+    width = width,
+    height = height,
+    col = col,
+    row = row,
+    style = "minimal", -- No borders or extra UI elements
+    border = "rounded",
+  }
+
+  -- Create the floating window
+  local win = vim.api.nvim_open_win(buf, true, win_config)
+
+  return { buf = buf, win = win }
+end
+
+local toggle_terminal = function()
+  if not vim.api.nvim_win_is_valid(state.floating.win) then
+    state.floating = create_floating_window { buf = state.floating.buf }
+    if vim.bo[state.floating.buf].buftype ~= "terminal" then
+      vim.cmd.terminal()
+    end
+  else
+    vim.api.nvim_win_hide(state.floating.win)
+  end
+  vim.cmd('normal i')
+end
+
+-- Example usage:
+-- Create a floating window with default dimensions
+vim.api.nvim_create_user_command("Floaterminal", toggle_terminal, {})
+vim.keymap.set("t", "<C-t>", "<C-\\><C-n>:Floaterminal<CR>")
+vim.keymap.set('n', '<C-t>', toggle_terminal)
 
 -- Move lines
 vim.keymap.set('v', 'J', ":m '>+1<CR>gv=gv")
@@ -184,19 +245,41 @@ vim.keymap.set('n', '<leader>pv', vim.cmd.Ex)
 vim.keymap.set('n', '<leader>gt', '<cmd>tabe .<CR>')
 vim.keymap.set('n', '<leader>gh', '<cmd>tabprevious<CR>')
 vim.keymap.set('n', '<leader>gl', '<cmd>tabnext<CR>')
+--
+-- Hover info
+vim.keymap.set('n', 'H', '<Cmd>lua vim.lsp.buf.hover()<CR>', { noremap = true, silent = true })
+
+-- Toggle Errors
 
 -- Clear highlights on search when pressing <Esc> in normal mode
 --  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
+
 -- Diagnostic keymaps
-vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+vim.keymap.set('n', '<leader>e', vim.diagnostic.setloclist, { desc = 'Open diagnostic [E]rrors list' })
 
 vim.diagnostic.config {
   virtual_text = false,
 }
 
-vim.diagnostic.config { virtual_lines = { highlight_whole_line = false, highlight = false } }
+
+vim.diagnostic.config({
+  virtual_lines = { highlight_whole_line = false, highlight = false },
+  virtual_text = false, -- Keep virtual_text enabled if needed
+})
+
+vim.keymap.set("n", "<leader>w", function()
+  local current_config = vim.diagnostic.config().virtual_lines
+  local new_value = not current_config
+
+  vim.diagnostic.config({
+    virtual_lines = new_value and { highlight_whole_line = false, highlight = false } or false
+  })
+
+  print("Virtual lines " .. (new_value and "enabled" or "disabled"))
+end, { desc = "Toggle [W]arnings virtual lines" })
+
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
 -- is not what someone will guess without a bit more experience.
@@ -222,8 +305,8 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
-
 -- Highlight when yanking (copying) text
+--
 --  Try it with `yap` in normal mode
 --  See `:help vim.highlight.on_yank()`
 vim.api.nvim_create_autocmd('TextYankPost', {
@@ -302,14 +385,14 @@ require('lazy').setup({
     lazy = false,
     config = function()
       require('tabout').setup {
-        tabkey = '<Tab>', -- key to trigger tabout, set to an empty string to disable
+        tabkey = '<Tab>',             -- key to trigger tabout, set to an empty string to disable
         backwards_tabkey = '<S-Tab>', -- key to trigger backwards tabout, set to an empty string to disable
-        act_as_tab = true, -- shift content if tab out is not possible
-        act_as_shift_tab = false, -- reverse shift content if tab out is not possible (if your keyboard/terminal supports <S-Tab>)
-        default_tab = '<C-t>', -- shift default action (only at the beginning of a line, otherwise <TAB> is used)
-        default_shift_tab = '<C-d>', -- reverse shift default action,
-        enable_backwards = true, -- well ...
-        completion = true, -- if the tabkey is used in a completion pum
+        act_as_tab = true,            -- shift content if tab out is not possible
+        act_as_shift_tab = false,     -- reverse shift content if tab out is not possible (if your keyboard/terminal supports <S-Tab>)
+        default_tab = '<C-t>',        -- shift default action (only at the beginning of a line, otherwise <TAB> is used)
+        default_shift_tab = '<C-d>',  -- reverse shift default action,
+        enable_backwards = true,      -- well ...
+        completion = true,            -- if the tabkey is used in a completion pum
         tabouts = {
           { open = "'", close = "'" },
           { open = '"', close = '"' },
@@ -327,9 +410,15 @@ require('lazy').setup({
       'L3MON4D3/LuaSnip',
       'hrsh7th/nvim-cmp',
     },
-    opt = true, -- Set this to true if the plugin is optional
+    opt = true,              -- Set this to true if the plugin is optional
     event = 'InsertCharPre', -- Set the event to 'InsertCharPre' for better compatibility
     priority = 1000,
+  },
+  -- rust help
+  {
+    'mrcjkb/rustaceanvim',
+    version = '^5', -- Recommended
+    lazy = false,   -- This plugin is already lazy
   },
   -- toggle comments
   {
@@ -342,22 +431,22 @@ require('lazy').setup({
   },
 
   -- COPILOT AI AUTO COMPLETE
-  {
-    'github/copilot.vim',
-  },
+  -- {
+  --   'github/copilot.vim',
+  -- },
 
-  {
-    'CopilotC-Nvim/CopilotChat.nvim',
-    dependencies = {
-      { 'github/copilot.vim' }, -- or zbirenbaum/copilot.lua
-      { 'nvim-lua/plenary.nvim', branch = 'master' }, -- for curl, log and async functions
-    },
-    build = 'make tiktoken', -- Only on MacOS or Linux
-    opts = {
-      -- See Configuration section for options
-    },
-    -- See Commands section for default commands if you want to lazy load on them
-  },
+  -- {
+  --   'CopilotC-Nvim/CopilotChat.nvim',
+  --   dependencies = {
+  --     { 'github/copilot.vim' }, -- or zbirenbaum/copilot.lua
+  --     { 'nvim-lua/plenary.nvim', branch = 'master' }, -- for curl, log and async functions
+  --   },
+  --   build = 'make tiktoken', -- Only on MacOS or Linux
+  --   opts = {
+  --     -- See Configuration section for options
+  --   },
+  --   -- See Commands section for default commands if you want to lazy load on them
+  -- },
 
   -- Discord RPC
   {
@@ -367,70 +456,15 @@ require('lazy').setup({
     opts = {}, -- calls require('cord').setup()
     config = function()
       require('cord').setup {
-        usercmds = true, -- Enable user commands
-        log_level = 'error', -- One of 'trace', 'debug', 'info', 'warn', 'error', 'off'
-        timer = {
-          interval = 1500, -- Interval between presence updates in milliseconds (min 500)
-          reset_on_idle = false, -- Reset start timestamp on idle
-          reset_on_change = false, -- Reset start timestamp on presence change
-        },
         editor = {
-          image = nil, -- Image ID or URL in case a custom client id is provided
-          client = 'neovim', -- vim, neovim, lunarvim, nvchad, astronvim or your application's client id
-          tooltip = 'The Text Editor', -- Text to display when hovering over the editor's image
-        },
-        display = {
-          show_time = true, -- Display start timestamp
-          show_repository = true, -- Display 'View repository' button linked to repository url, if any
-          show_cursor_position = false, -- Display line and column number of cursor's position
-          swap_fields = false, -- If enabled, workspace is displayed first
-          swap_icons = false, -- If enabled, editor is displayed on the main image
-          workspace_blacklist = {}, -- List of workspace names that will hide rich presence
-        },
-        lsp = {
-          show_problem_count = false, -- Display number of diagnostics problems
-          severity = 1, -- 1 = Error, 2 = Warning, 3 = Info, 4 = Hint
-          scope = 'workspace', -- buffer or workspace
-        },
-        idle = {
-          enable = true, -- Enable idle status
-          show_status = true, -- Display idle status, disable to hide the rich presence on idle
-          timeout = 300000, -- Timeout in milliseconds after which the idle status is set, 0 to display immediately
-          disable_on_focus = false, -- Do not display idle status when neovim is focused
-          text = 'Idle', -- Text to display when idle
-          tooltip = '💤', -- Text to display when hovering over the idle image
+          client = 'neovim',
+          tooltip = 'linux btw',
         },
         text = {
-          viewing = 'Viewing {}', -- Text to display when viewing a readonly file
-          editing = 'Editing {}', -- Text to display when editing a file
-          file_browser = 'Browsing files', -- Text to display when browsing files (Empty string to disable)
-          plugin_manager = 'Managing plugins in {}', -- Text to display when managing plugins (Empty string to disable)
-          lsp_manager = 'Configuring LSP in {}', -- Text to display when managing LSP servers (Empty string to disable)
-          vcs = 'Committing changes in {}', -- Text to display when using Git or Git-related plugin (Empty string to disable)
-          workspace = 'In {}', -- Text to display when in a workspace (Empty string to disable)
-        },
-        buttons = {
-          {
-            label = 'View Repository', -- Text displayed on the button
-            url = 'git', -- URL where the button leads to ('git' = automatically fetch Git repository URL)
-          },
-          -- {
-          --   label = 'View Plugin',
-          --   url = 'https://github.com/vyfor/cord.nvim',
-          -- }
-        },
-        assets = nil, -- Custom file icons, see the wiki*
-        -- assets = {
-        --   lazy = {                                 -- Vim filetype or file name or file extension = table or string
-        --     name = 'Lazy',                         -- Optional override for the icon name, redundant for language types
-        --     icon = 'https://example.com/lazy.png', -- Rich Presence asset name or URL
-        --     tooltip = 'lazy.nvim',                 -- Text to display when hovering over the icon
-        --     type = 'plugin_manager',               -- One of 'language', 'file_browser', 'plugin_manager', 'lsp_manager', 'vcs' or respective ordinals; defaults to 'language'
-        --   },
-        --   ['Cargo.toml'] = 'crates',
-        -- },
+          viewing = 'Viewing ${filename} - ${problems} problems',
+        }
       }
-    end,
+    end
   },
   -- undotree
   {
@@ -445,7 +479,7 @@ require('lazy').setup({
       end
     end,
   },
-  -- lsp-lines bc normal are so ugly
+  -- -- lsp-lines bc normal are so ugly
   {
     'https://git.sr.ht/~whynothugo/lsp_lines.nvim',
     config = function()
@@ -471,15 +505,15 @@ require('lazy').setup({
         end
 
         require('telescope.pickers')
-          .new({}, {
-            prompt_title = 'Harpoon',
-            finder = require('telescope.finders').new_table {
-              results = file_paths,
-            },
-            previewer = conf.file_previewer {},
-            sorter = conf.generic_sorter {},
-          })
-          :find()
+            .new({}, {
+              prompt_title = 'Harpoon',
+              finder = require('telescope.finders').new_table {
+                results = file_paths,
+              },
+              previewer = conf.file_previewer {},
+              sorter = conf.generic_sorter {},
+            })
+            :find()
       end
 
       vim.keymap.set('n', '<C-e>', function()
@@ -529,7 +563,7 @@ require('lazy').setup({
   -- after the plugin has been loaded:
   --  config = function() ... end
 
-  { -- Useful plugin to show you pending keybinds.
+  {                     -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
     opts = {
@@ -573,13 +607,13 @@ require('lazy').setup({
 
       -- Document existing key chains
       spec = {
-        { '<leader>c', group = '[C]ode', mode = { 'n', 'x' } },
+        { '<leader>c', group = '[C]ode',               mode = { 'n', 'x' } },
         { '<leader>d', group = '[D]ocument' },
         { '<leader>h', group = '[H]arpoon' },
         { '<leader>r', group = '[R]ename' },
         { '<leader>s', group = '[S]earch' },
         { '<leader>g', group = 'Tabs' },
-        { '<leader>w', group = '[W]orkspace' },
+        { '<leader>f', group = '[F]unctions/Workplace' },
         { '<leader>t', group = '[T]oggle' },
         --{ '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
       },
@@ -615,7 +649,7 @@ require('lazy').setup({
       { 'nvim-telescope/telescope-ui-select.nvim' },
 
       -- Useful for getting pretty icons, but requires a Nerd Font.
-      { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
+      { 'nvim-tree/nvim-web-devicons',            enabled = vim.g.have_nerd_font },
     },
     config = function()
       -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -644,12 +678,12 @@ require('lazy').setup({
           mappings = {
             i = {
               -- 'i' for insert mode
-              ['<C-j>'] = 'move_selection_next', -- Move down
+              ['<C-j>'] = 'move_selection_next',     -- Move down
               ['<C-k>'] = 'move_selection_previous', -- Move up
             },
             n = {
               -- 'n' for normal mode
-              ['<C-j>'] = 'move_selection_next', -- Move down
+              ['<C-j>'] = 'move_selection_next',     -- Move down
               ['<C-k>'] = 'move_selection_previous', -- Move up
             },
           },
@@ -676,12 +710,13 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader>sr', require('telescope.builtin').lsp_references, { desc = '[S]earch [R]eferences' })
-      vim.keymap.set('n', '<leader>si', require('telescope.builtin').lsp_implementations, { desc = '[S]earch [I]mplementations' })
+      vim.keymap.set('n', '<leader>si', require('telescope.builtin').lsp_implementations,
+        { desc = '[S]earch [I]mplementations' })
 
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
 
       -- Slightly advanced example of overriding default behavior and theme
-      vim.keymap.set('n', '<leader>/', function()
+      vim.keymap.set('n', '<leader>ff', function()
         -- You can pass additional configuration to Telescope to change the theme, layout, etc.
         builtin.current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
           winblend = 10,
@@ -704,7 +739,6 @@ require('lazy').setup({
       end, { desc = '[S]earch [N]eovim files' })
     end,
   },
-
   -- LSP Plugins
   {
     -- `lazydev` configures Lua LSP for your Neovim config, runtime and plugins
@@ -718,10 +752,19 @@ require('lazy').setup({
       },
     },
   },
-  { 'Bilal2453/luvit-meta', lazy = true },
   {
-    -- Main LSP Configuration
+    'Bilal2453/luvit-meta',
+    lazy = true
+  },
+  {
+    -- Main LSP Configuration  {
     'neovim/nvim-lspconfig',
+
+    opts = {
+      setup = {
+        rust_analyzer = function() end, -- Disable setup for rust_analyzer
+      },
+    },
     dependencies = {
       -- Automatically install LSPs and related tools to stdpath for Neovim
       { 'williamboman/mason.nvim', config = true }, -- NOTE: Must be loaded before dependants
@@ -730,11 +773,16 @@ require('lazy').setup({
 
       -- Useful status updates for LSP.
       -- NOTE: `opts = {}` is the same as calling `require('fidget').setup({})`
-      { 'j-hui/fidget.nvim', opts = { notification = {
-        window = {
-          winblend = 0,
-        },
-      } } },
+      {
+        'j-hui/fidget.nvim',
+        opts = {
+          notification = {
+            window = {
+              winblend = 0,
+            },
+          }
+        }
+      },
 
       -- Allows extra capabilities provided by nvim-cmp
       'hrsh7th/cmp-nvim-lsp',
@@ -810,16 +858,16 @@ require('lazy').setup({
           end, 'Type [D]efinition')
 
           -- Fuzzy find all the symbols in your current document in a vertical split.
-          map('<leader>ds', function()
+          map('<leader>fc', function()
             vim.cmd 'vsplit'
             require('telescope.builtin').lsp_document_symbols()
-          end, '[D]ocument [S]ymbols')
+          end, '[F]unction [C]urrent [S]ymbols')
 
           -- Fuzzy find all the symbols in your current workspace in a vertical split.
-          map('<leader>ws', function()
+          map('<leader>fs', function()
             vim.cmd 'vsplit'
             require('telescope.builtin').lsp_dynamic_workspace_symbols()
-          end, '[W]orkspace [S]ymbols')
+          end, '[F]unction [S]ymbols')
 
           -- Execute a code action, usually your cursor needs to be on top of an error
           -- or a suggestion from your LSP for this to activate.
@@ -857,6 +905,10 @@ require('lazy').setup({
               end,
             })
           end
+          -- You can add this inside your `config` function or inside your custom key mappings
+
+          -- Mapping to toggle LSP hover diagnostics (warnings) visibility
+
 
           -- The following code creates a keymap to toggle inlay hints in your
           -- code, if the language server you are using supports them
@@ -905,8 +957,8 @@ require('lazy').setup({
           settings = {
             html = {
               format = {
-                enable = true, -- Enable formatting
-                indentInnerHtml = true, -- Indent <head> and <body> sections
+                enable = true,           -- Enable formatting
+                indentInnerHtml = true,  -- Indent <head> and <body> sections
                 wrapLineLength = 120,
                 wrapAttributes = 'auto', -- Options: 'auto', 'force', 'force-aligned', 'force-expand-multiline'
               },
@@ -914,8 +966,8 @@ require('lazy').setup({
           },
           configurationSection = { 'html', 'css', 'javascript' }, -- Specify configuration sections
           embeddedLanguages = {
-            css = true, -- Enable embedded CSS support
-            javascript = true, -- Enable embedded JavaScript support
+            css = true,                                           -- Enable embedded CSS support
+            javascript = true,                                    -- Enable embedded JavaScript support
           },
         },
 
@@ -949,11 +1001,13 @@ require('lazy').setup({
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
       })
-      require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
       require('mason-lspconfig').setup {
         handlers = {
           function(server_name)
+            if server_name == "rust_analyzer" then
+              return
+            end
             local server = servers[server_name] or {}
             -- This handles overriding only values explicitly passed
             -- by the server configuration above. Useful when disabling
@@ -963,7 +1017,15 @@ require('lazy').setup({
           end,
         },
       }
-    end,
+      require('mason-tool-installer').setup { ensure_installed = ensure_installed }
+      -- require('lspconfig').bacon_ls.setup {
+      --   init_options = {
+      --     updateOnSave = true,
+      --     updateOnSaveWaitMillis = 1000,
+      --     updateOnChange = false,
+      --   },
+      -- }
+    end
   },
 
   { -- Autoformat
@@ -972,7 +1034,7 @@ require('lazy').setup({
     cmd = { 'ConformInfo' },
     keys = {
       {
-        '<leader>f',
+        '<leader>bf',
         function()
           require('conform').format { async = true, lsp_format = 'fallback' }
         end,
@@ -1009,6 +1071,45 @@ require('lazy').setup({
     },
   },
 
+  {
+    "lukas-reineke/indent-blankline.nvim",
+    main = "ibl",
+    ---@module "ibl"
+    ---@type ibl.config
+    opts = {},
+    config = function()
+      local highlight = {
+        "RainbowRed",
+        "RainbowYellow",
+        "RainbowBlue",
+        "RainbowOrange",
+        "RainbowGreen",
+        "RainbowViolet",
+        "RainbowCyan",
+      }
+
+      local hooks = require "ibl.hooks"
+      -- create the highlight groups in the highlight setup hook, so they are reset
+      -- every time the colorscheme changes
+
+      hooks.register(hooks.type.HIGHLIGHT_SETUP, function()
+        vim.api.nvim_set_hl(0, "DeepMossGreen", { fg = "#2E4A34" }) -- Deep Moss Green
+        vim.api.nvim_set_hl(0, "FernGreen", { fg = "#385e40" })     -- Fern Green
+        vim.api.nvim_set_hl(0, "SlateTeal", { fg = "#3E6A70" })     -- Slate Teal
+        vim.api.nvim_set_hl(0, "DarkCerulean", { fg = "#3a7078" })  -- Dark Cerulean
+        vim.api.nvim_set_hl(0, "DeepSeaGreen", { fg = "#317a85" })  -- Deep Sea Green
+        vim.api.nvim_set_hl(0, "SteelTeal", { fg = "#2c8694" })     -- Steel Teal
+        vim.api.nvim_set_hl(0, "MoonstoneBlue", { fg = "#37abbd" }) -- Moonstone Blue
+        vim.api.nvim_set_hl(0, "ScopeGray", { fg = "#76c7c0" })     -- Neutral Gray for Scope
+      end)
+
+      require("ibl").setup {
+        indent = { highlight = { "DeepMossGreen", "FernGreen", "SlateTeal", "DarkCerulean", "DeepSeaGreen", "SteelTeal", "MoonstoneBlue" } },
+        scope = { highlight = { "ScopeGray" } } -- Scope lines in gray
+      }
+    end
+
+  },
   { -- Autocompletion
     'hrsh7th/nvim-cmp',
     event = 'InsertEnter',
@@ -1189,7 +1290,21 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'html', 'javascript' },
+      ensure_installed = {
+        'bash',
+        'c',
+        'diff',
+        'html',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'query',
+        'vim',
+        'vimdoc',
+        'html',
+        'javascript',
+      },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -1219,7 +1334,7 @@ require('lazy').setup({
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
   -- require 'kickstart.plugins.debug',
-  require 'kickstart.plugins.indent_line',
+  -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
   require 'kickstart.plugins.autopairs',
   require 'kickstart.plugins.neo-tree',

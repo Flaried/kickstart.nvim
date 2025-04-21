@@ -1,4 +1,5 @@
 --[[
+--
 
 =====================================================================
 ==================== READ THIS BEFORE CONTINUING ====================
@@ -387,16 +388,6 @@ require('lazy').setup({
         changedelete = { text = '~' },
       },
     },
-  },
-
-  -- this makes pairs of brackets and quotes automatically
-  {
-    'windwp/nvim-autopairs',
-    config = function()
-      require('autopairs').setup {
-        event = 'InsertEnter',
-      } --
-    end,
   },
 
   -- this can tab out of quotes automatically

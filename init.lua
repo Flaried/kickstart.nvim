@@ -253,6 +253,7 @@ vim.keymap.set('n', '<leader>gl', '<cmd>tabnext<CR>')
 --
 -- Hover info
 vim.keymap.set('n', 'H', '<Cmd>lua vim.lsp.buf.hover()<CR>', { noremap = true, silent = true })
+vim.keymap.set('i', '<C-v>', '<Cmd>lua vim.lsp.buf.hover()<CR>', { noremap = true, silent = true })
 
 -- Toggle Errors
 

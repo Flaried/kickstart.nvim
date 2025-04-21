@@ -160,7 +160,7 @@ vim.opt.scrolloff = 10
 -- if performing an operation that would fail due to unsaved changes in the buffer (like `:q`),
 -- instead raise a dialog asking if you wish to save the current file(s)
 -- See `:help 'confirm'`
-vim.opt.confirm = true
+-- vim.opt.confirm = true
 
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
@@ -247,7 +247,7 @@ vim.keymap.set('n', '<leader>Y', [["+Y]], { desc = 'Copy to clipboard' })
 vim.keymap.set('n', '<leader>pv', vim.cmd.Ex)
 
 -- Tabs
-vim.keymap.set('n', '<leader>gt', '<cmd>tabe .<CR>')
+vim.keymap.set('n', '<leader>gj', '<cmd>tabe .<CR>')
 vim.keymap.set('n', '<leader>gh', '<cmd>tabprevious<CR>')
 vim.keymap.set('n', '<leader>gl', '<cmd>tabnext<CR>')
 --
@@ -460,6 +460,10 @@ require('lazy').setup({
   --   -- See Commands section for default commands if you want to lazy load on them
   -- },
 
+  -- Collapsable Tagbar
+
+  { 'preservim/tagbar',         event = 'BufRead' },
+
   -- Discord RPC
   {
     'vyfor/cord.nvim',
@@ -473,6 +477,28 @@ require('lazy').setup({
           tooltip = 'linux btw',
         },
         text = {
+          editing = function(opts)
+            local current_tag = vim.fn['tagbar#currenttag']('%s', '', 'f')
+            -- if empty put file name
+            if current_tag == "" then
+              current_tag = opts.filename
+            end
+
+            return string.format('🐕 %s (%s)', current_tag, opts.cursor_line)
+          end,
+          workspace = function(opts)
+            return string.format('%s; %s', opts.workspace, opts.filename)
+          end,
+          -- editing = function(opts)
+          --   local current_tag = vim.fn['tagbar#currenttag']('%s', '', 'f')
+          --
+          --   -- local diagnostics = vim.diagnostic.get(0, { severity = { min = vim.diagnostic.severity.ERROR } })
+          --   --
+          --   -- if #diagnostics > 0 then
+          --   --   return string.format('💀 %s errors %s %s:%s', #diagnostics, opts.filename, opts.cursor_line, opts.cursor_char)
+          --   -- end
+          --   return string.format('🌊 %s %s:%s %s', opts.filename, opts.cursor_line, opts.cursor_char, current_tag)
+          -- end,
           viewing = 'Viewing ${filename} - ${problems} problems',
         }
       }
@@ -769,6 +795,7 @@ require('lazy').setup({
     'Bilal2453/luvit-meta',
     lazy = true
   },
+
   {
     -- Main LSP Configuration  {
     'neovim/nvim-lspconfig',
@@ -855,10 +882,11 @@ require('lazy').setup({
           --  This is where a variable was first declared, or where a function is defined, etc.
           --  To jump back, press <C-t>.
           map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
+          vim.api.nvim_set_keymap('n', 'gb', ':bnext<CR>', { noremap = true, silent = true })
 
           -- WARN: This is not Goto Definition, this is Goto Declaration.
           --  For example, in C this would take you to the header.
-          map('grD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
+          map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
           -- Fuzzy find all the symbols in your current document.
           --  Symbols are things like variables, functions, types, etc.
@@ -977,7 +1005,18 @@ require('lazy').setup({
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
         -- clangd = {},
-        -- gopls = {},
+        gopls = {
+          completeUnimported = true,
+          usePlaceholders = true,
+          staticcheck = true,
+          analyses = {
+            unusedparams = true,
+            unreachable = true,
+            fieldalignment = true,
+          },
+
+          hoverKind = "FullDocumentation",
+        },
         -- pyright = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
@@ -1154,6 +1193,8 @@ require('lazy').setup({
     'saghen/blink.cmp',
     event = 'VimEnter',
     version = '1.*',
+
+
     dependencies = {
       -- Snippet Engine
       {
@@ -1213,18 +1254,60 @@ require('lazy').setup({
 
         -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
         --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
+
       },
+
+      cmdline = { enabled = false },
+
 
       appearance = {
         -- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
         -- Adjusts spacing to ensure icons are aligned
-        nerd_font_variant = 'mono',
+        nerd_font_variant = 'normal',
+
       },
 
       completion = {
         -- By default, you may press `<c-space>` to show the documentation.
         -- Optionally, set `auto_show = true` to show the documentation after a delay.
-        documentation = { auto_show = false, auto_show_delay_ms = 500 },
+
+        keyword = { range = 'full' },
+        -- Disable auto brackets
+        -- NOTE: some LSPs may add auto brackets themselves anyway
+        accept = { auto_brackets = { enabled = false }, },
+
+        -- Don't select by default, auto insert on selection
+        list = { selection = { preselect = false, auto_insert = true } },
+
+        menu = {
+          -- Don't automatically show the completion menu
+          auto_show = true,
+
+          -- nvim-cmp style menu
+          draw = {
+            gap = 1,
+            padding = 1,
+            treesitter = {},
+
+            columns = {
+              { "label",     "label_description", gap = 1, max = 9999, },
+              { "kind_icon", "kind" }
+            },
+          }
+        },
+
+        documentation = {
+          -- Controls whether the documentation window will automatically show when selecting a completion item
+          auto_show = true,
+          -- Delay before showing the documentation window
+          auto_show_delay_ms = 500,
+          -- Delay before updating the documentation window when selecting a new item,
+          -- while an existing item is still visible
+          update_delay_ms = 50,
+          -- Whether to use treesitter highlighting, disable if you run into performance issues
+          treesitter_highlighting = true,
+        }
+
       },
 
       sources = {
@@ -1247,6 +1330,7 @@ require('lazy').setup({
 
       -- Shows a signature help window while you type arguments for a function
       signature = { enabled = true },
+
     },
   },
 
@@ -1320,19 +1404,19 @@ require('lazy').setup({
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
       ensure_installed = {
-        'bash',
-        'c',
-        'diff',
-        'html',
-        'lua',
-        'luadoc',
-        'markdown',
-        'markdown_inline',
-        'query',
-        'vim',
-        'vimdoc',
-        'html',
-        'javascript',
+        -- 'bash',
+        -- 'c',
+        -- 'diff',
+        -- 'html',
+        -- 'lua',
+        -- 'luadoc',
+        -- 'markdown',
+        -- 'markdown_inline',
+        -- 'query',
+        -- 'vim',
+        -- 'vimdoc',
+        -- 'html',
+        -- 'javascript',
       },
       -- Autoinstall languages that are not installed
       auto_install = true,

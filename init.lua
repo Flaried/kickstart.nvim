@@ -257,6 +257,10 @@ vim.keymap.set('i', '<C-v>', '<Cmd>lua vim.lsp.buf.hover()<CR>', { noremap = tru
 
 -- Toggle Errors
 
+-- Golang errors
+vim.keymap.set('i', '<C-e>', 'if err != nil {<Esc>o}<Esc>O',
+  { desc = 'Format error', noremap = true, silent = true })
+
 -- Clear highlights on search when pressing <Esc> in normal mode
 --  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
@@ -264,11 +268,6 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>e', vim.diagnostic.setloclist, { desc = 'Open diagnostic [E]rrors list' })
-
-vim.diagnostic.config {
-  virtual_text = false,
-}
-
 
 vim.diagnostic.config({
   virtual_lines = { highlight_whole_line = false, highlight = false },
@@ -869,7 +868,7 @@ require('lazy').setup({
 
           -- Execute a code action, usually your cursor needs to be on top of an error
           -- or a suggestion from your LSP for this to activate.
-          map('gra', vim.lsp.buf.code_action, '[G]oto Code [A]ction', { 'n', 'x' })
+          map('ca', vim.lsp.buf.code_action, '[G]oto Code [A]ction', { 'n', 'x' })
 
           -- Find references for the word under your cursor.
           map('grr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
@@ -973,19 +972,20 @@ require('lazy').setup({
             [vim.diagnostic.severity.HINT] = '󰌶 ',
           },
         } or {},
-        virtual_text = {
-          source = 'if_many',
-          spacing = 2,
-          format = function(diagnostic)
-            local diagnostic_message = {
-              [vim.diagnostic.severity.ERROR] = diagnostic.message,
-              [vim.diagnostic.severity.WARN] = diagnostic.message,
-              [vim.diagnostic.severity.INFO] = diagnostic.message,
-              [vim.diagnostic.severity.HINT] = diagnostic.message,
-            }
-            return diagnostic_message[diagnostic.severity]
-          end,
-        },
+        -- I dont need virtual text because i have lines
+        -- virtual_text = {
+        --   source = 'if_many',
+        --   spacing = 2,
+        --   format = function(diagnostic)
+        --     local diagnostic_message = {
+        --       [vim.diagnostic.severity.ERROR] = diagnostic.message,
+        --       [vim.diagnostic.severity.WARN] = diagnostic.message,
+        --       [vim.diagnostic.severity.INFO] = diagnostic.message,
+        --       [vim.diagnostic.severity.HINT] = diagnostic.message,
+        --     }
+        --     return diagnostic_message[diagnostic.severity]
+        --   end,
+        -- },
       }
 
       -- LSP servers and clients are able to communicate to each other what features they support.
@@ -1277,7 +1277,8 @@ require('lazy').setup({
         accept = { auto_brackets = { enabled = false }, },
 
         -- Don't select by default, auto insert on selection
-        list = { selection = { preselect = false, auto_insert = true } },
+        -- Auto insert messes up your cursor
+        list = { selection = { preselect = false, auto_insert = false } },
 
         menu = {
           -- Don't automatically show the completion menu

@@ -166,8 +166,7 @@ vim.opt.scrolloff = 10
 --  See `:help vim.keymap.set()`
 
 -- Definition in vertical split
-vim.keymap.set('n', '<leader>v', '<cmd>vsplit | lua vim.lsp.buf.definition()<cr>',
-  { desc = 'Goto Definition in Vertical Split' })
+vim.keymap.set('n', '<leader>v', '<cmd>vsplit | lua vim.lsp.buf.definition()<cr>', { desc = 'Goto Definition in Vertical Split' })
 
 -- make new st terminal in the working directory and disown it
 vim.keymap.set('n', '<leader>d', function()
@@ -180,7 +179,7 @@ local state = {
   floating = {
     buf = -1,
     win = -1,
-  }
+  },
 }
 
 local function create_floating_window(opts)
@@ -202,13 +201,13 @@ local function create_floating_window(opts)
 
   -- Define window configuration
   local win_config = {
-    relative = "editor",
+    relative = 'editor',
     width = width,
     height = height,
     col = col,
     row = row,
-    style = "minimal", -- No borders or extra UI elements
-    border = "rounded",
+    style = 'minimal', -- No borders or extra UI elements
+    border = 'rounded',
   }
 
   -- Create the floating window
@@ -220,19 +219,19 @@ end
 local toggle_terminal = function()
   if not vim.api.nvim_win_is_valid(state.floating.win) then
     state.floating = create_floating_window { buf = state.floating.buf }
-    if vim.bo[state.floating.buf].buftype ~= "terminal" then
+    if vim.bo[state.floating.buf].buftype ~= 'terminal' then
       vim.cmd.terminal()
     end
   else
     vim.api.nvim_win_hide(state.floating.win)
   end
-  vim.cmd('normal i')
+  vim.cmd 'normal i'
 end
 
 -- Example usage:
 -- Create a floating window with default dimensions
-vim.api.nvim_create_user_command("Floaterminal", toggle_terminal, {})
-vim.keymap.set("t", "<C-t>", "<C-\\><C-n>:Floaterminal<CR>")
+vim.api.nvim_create_user_command('Floaterminal', toggle_terminal, {})
+vim.keymap.set('t', '<C-t>', '<C-\\><C-n>:Floaterminal<CR>')
 vim.keymap.set('n', '<C-t>', toggle_terminal)
 
 -- Move lines
@@ -258,32 +257,30 @@ vim.keymap.set('i', '<C-v>', '<Cmd>lua vim.lsp.buf.hover()<CR>', { noremap = tru
 -- Toggle Errors
 
 -- Golang errors
-vim.keymap.set('i', '<C-e>', 'if err != nil {<Esc>o}<Esc>O',
-  { desc = 'Format error', noremap = true, silent = true })
+vim.keymap.set('i', '<C-e>', 'if err != nil {<Esc>o}<Esc>O', { desc = 'Format error', noremap = true, silent = true })
 
 -- Clear highlights on search when pressing <Esc> in normal mode
 --  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
-
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>e', vim.diagnostic.setloclist, { desc = 'Open diagnostic [E]rrors list' })
 
-vim.diagnostic.config({
+vim.diagnostic.config {
   virtual_lines = { highlight_whole_line = false, highlight = false },
   virtual_text = false, -- Keep virtual_text enabled if needed
-})
+}
 
-vim.keymap.set("n", "<leader>w", function()
+vim.keymap.set('n', '<leader>w', function()
   local current_config = vim.diagnostic.config().virtual_lines
   local new_value = not current_config
 
-  vim.diagnostic.config({
-    virtual_lines = new_value and { highlight_whole_line = false, highlight = false } or false
-  })
+  vim.diagnostic.config {
+    virtual_lines = new_value and { highlight_whole_line = false, highlight = false } or false,
+  }
 
-  print("Virtual lines " .. (new_value and "enabled" or "disabled"))
-end, { desc = "Toggle [W]arnings virtual lines" })
+  print('Virtual lines ' .. (new_value and 'enabled' or 'disabled'))
+end, { desc = 'Toggle [W]arnings virtual lines' })
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -379,6 +376,12 @@ require('lazy').setup({
   -- See `:help gitsigns` to understand what the configuration keys do
   { -- Adds git related signs to the gutter, as well as utilities for managing changes
     'lewis6991/gitsigns.nvim',
+    config = function()
+      require('gitsigns').setup()
+
+      vim.keymap.set('n', '<leader>gp', ':Gitsigns preview_hunk<CR>', { desc = '{G}it {P}rieview' })
+      vim.keymap.set('n', '<leader>gt', ':Gitsigns toggle_current_line_blame<CR>', { desc = '{G}it line comment' })
+    end,
     opts = {
       signs = {
         add = { text = '+' },
@@ -389,6 +392,69 @@ require('lazy').setup({
       },
     },
   },
+  -- Example for lazy.nvim
+  {
+    'hrsh7th/nvim-cmp',
+    dependencies = {
+      'hrsh7th/cmp-nvim-lsp',
+      'hrsh7th/cmp-buffer',
+      'hrsh7th/cmp-path',
+      'hrsh7th/cmp-cmdline',
+      'hrsh7th/cmp-emoji',
+    },
+    config = function()
+      local cmp = require 'cmp'
+      cmp.setup {
+        sources = {
+          { name = 'emoji' },
+          -- add other sources like buffer, path, etc.
+        },
+
+        mapping = {
+          ['<Down>'] = cmp.mapping.select_next_item(),
+          ['<Up>'] = cmp.mapping.select_prev_item(),
+          ['<C-y>'] = cmp.mapping.confirm { select = true },
+          ['<CR>'] = cmp.mapping(function(fallback)
+            -- disable <CR> to avoid accidental confirmation
+            fallback()
+          end),
+        },
+      }
+    end,
+  },
+
+  -- Mark down view :MarkDownPreview
+  {
+    'iamcco/markdown-preview.nvim',
+    cmd = { 'MarkdownPreviewToggle', 'MarkdownPreview', 'MarkdownPreviewStop' },
+    build = 'cd app && yarn install',
+    init = function()
+      vim.g.mkdp_filetypes = { 'markdown' }
+    end,
+    ft = { 'markdown' },
+  },
+
+  -- Lazy git
+  {
+    'kdheepak/lazygit.nvim',
+    lazy = true,
+    cmd = {
+      'LazyGit',
+      'LazyGitConfig',
+      'LazyGitCurrentFile',
+      'LazyGitFilter',
+      'LazyGitFilterCurrentFile',
+    },
+    -- optional for floating window border decoration
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+    },
+    -- setting the keybinding for LazyGit with 'keys' is recommended in
+    -- order to load the plugin when the command is run for the first time
+    keys = {
+      { '<leader>lg', '<cmd>LazyGit<cr>', desc = 'LazyGit' },
+    },
+  },
 
   -- this can tab out of quotes automatically
   {
@@ -396,14 +462,14 @@ require('lazy').setup({
     lazy = false,
     config = function()
       require('tabout').setup {
-        tabkey = '<Tab>',             -- key to trigger tabout, set to an empty string to disable
+        tabkey = '<Tab>', -- key to trigger tabout, set to an empty string to disable
         backwards_tabkey = '<S-Tab>', -- key to trigger backwards tabout, set to an empty string to disable
-        act_as_tab = true,            -- shift content if tab out is not possible
-        act_as_shift_tab = false,     -- reverse shift content if tab out is not possible (if your keyboard/terminal supports <S-Tab>)
-        default_tab = '<C-t>',        -- shift default action (only at the beginning of a line, otherwise <TAB> is used)
-        default_shift_tab = '<C-d>',  -- reverse shift default action,
-        enable_backwards = true,      -- well ...
-        completion = true,            -- if the tabkey is used in a completion pum
+        act_as_tab = true, -- shift content if tab out is not possible
+        act_as_shift_tab = false, -- reverse shift content if tab out is not possible (if your keyboard/terminal supports <S-Tab>)
+        default_tab = '<C-t>', -- shift default action (only at the beginning of a line, otherwise <TAB> is used)
+        default_shift_tab = '<C-d>', -- reverse shift default action,
+        enable_backwards = true, -- well ...
+        completion = true, -- if the tabkey is used in a completion pum
         tabouts = {
           { open = "'", close = "'" },
           { open = '"', close = '"' },
@@ -421,16 +487,30 @@ require('lazy').setup({
       'L3MON4D3/LuaSnip',
       'hrsh7th/nvim-cmp',
     },
-    opt = true,              -- Set this to true if the plugin is optional
+    opt = true, -- Set this to true if the plugin is optional
     event = 'InsertCharPre', -- Set the event to 'InsertCharPre' for better compatibility
     priority = 1000,
   },
   -- rust help
-  {
-    'mrcjkb/rustaceanvim',
-    version = '^5', -- Recommended
-    lazy = false,   -- This plugin is already lazy
-  },
+  -- {
+  --   'mrcjkb/rustaceanvim',
+  --   version = '^6',
+  --   lazy = false,
+  --   config = function()
+  --     vim.g.rustaceanvim = {
+  --       server = {
+  --         settings = {
+  --           ['rust-analyzer'] = {
+  --             files = {
+  --               sysrootSrc = vim.fn.systemlist('rustc --print sysroot')[1] .. '/lib/rustlib/src/rust/library',
+  --             },
+  --           },
+  --         },
+  --       },
+  --     }
+  --   end,
+  -- },
+
   -- toggle comments
   {
     'terrortylor/nvim-comment',
@@ -461,7 +541,7 @@ require('lazy').setup({
 
   -- Collapsable Tagbar
 
-  { 'preservim/tagbar',         event = 'BufRead' },
+  { 'preservim/tagbar', event = 'BufRead' },
 
   -- Discord RPC
   {
@@ -477,9 +557,10 @@ require('lazy').setup({
         },
         text = {
           editing = function(opts)
-            local current_tag = vim.fn['tagbar#currenttag']('%s', '', 'f')
+            -- local current_tag = vim.fn['tagbar#currenttag']('%s', '', 'f')
+            current_tag = ''
             -- if empty put file name
-            if current_tag == "" then
+            if current_tag == '' then
               current_tag = opts.filename
             end
 
@@ -499,9 +580,9 @@ require('lazy').setup({
           --   return string.format('🌊 %s %s:%s %s', opts.filename, opts.cursor_line, opts.cursor_char, current_tag)
           -- end,
           viewing = 'Viewing ${filename} - ${problems} problems',
-        }
+        },
       }
-    end
+    end,
   },
   -- undotree
   {
@@ -542,15 +623,15 @@ require('lazy').setup({
         end
 
         require('telescope.pickers')
-            .new({}, {
-              prompt_title = 'Harpoon',
-              finder = require('telescope.finders').new_table {
-                results = file_paths,
-              },
-              previewer = conf.file_previewer {},
-              sorter = conf.generic_sorter {},
-            })
-            :find()
+          .new({}, {
+            prompt_title = 'Harpoon',
+            finder = require('telescope.finders').new_table {
+              results = file_paths,
+            },
+            previewer = conf.file_previewer {},
+            sorter = conf.generic_sorter {},
+          })
+          :find()
       end
 
       vim.keymap.set('n', '<C-e>', function()
@@ -599,7 +680,7 @@ require('lazy').setup({
   -- Then, because we use the `opts` key (recommended), the configuration runs
   -- after the plugin has been loaded as `require(MODULE).setup(opts)`.
 
-  {                     -- Useful plugin to show you pending keybinds.
+  { -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
     opts = {
@@ -646,7 +727,7 @@ require('lazy').setup({
 
       -- Document existing key chains
       spec = {
-        { '<leader>c', group = '[C]ode',               mode = { 'n', 'x' } },
+        { '<leader>c', group = '[C]ode', mode = { 'n', 'x' } },
         { '<leader>d', group = '[D]ocument' },
         { '<leader>h', group = '[H]arpoon' },
         { '<leader>r', group = '[R]ename' },
@@ -687,7 +768,7 @@ require('lazy').setup({
       { 'nvim-telescope/telescope-ui-select.nvim' },
 
       -- Useful for getting pretty icons, but requires a Nerd Font.
-      { 'nvim-tree/nvim-web-devicons',            enabled = vim.g.have_nerd_font },
+      { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
     },
     config = function()
       -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -716,12 +797,12 @@ require('lazy').setup({
           mappings = {
             i = {
               -- 'i' for insert mode
-              ['<C-j>'] = 'move_selection_next',     -- Move down
+              ['<C-j>'] = 'move_selection_next', -- Move down
               ['<C-k>'] = 'move_selection_previous', -- Move up
             },
             n = {
               -- 'n' for normal mode
-              ['<C-j>'] = 'move_selection_next',     -- Move down
+              ['<C-j>'] = 'move_selection_next', -- Move down
               ['<C-k>'] = 'move_selection_previous', -- Move up
             },
           },
@@ -748,8 +829,7 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader>sr', require('telescope.builtin').lsp_references, { desc = '[S]earch [R]eferences' })
-      vim.keymap.set('n', '<leader>si', require('telescope.builtin').lsp_implementations,
-        { desc = '[S]earch [I]mplementations' })
+      vim.keymap.set('n', '<leader>si', require('telescope.builtin').lsp_implementations, { desc = '[S]earch [I]mplementations' })
 
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
 
@@ -792,7 +872,7 @@ require('lazy').setup({
   },
   {
     'Bilal2453/luvit-meta',
-    lazy = true
+    lazy = true,
   },
 
   {
@@ -814,7 +894,7 @@ require('lazy').setup({
 
       -- Useful status updates for LSP.
 
-      { 'j-hui/fidget.nvim',       opts = {} },
+      { 'j-hui/fidget.nvim', opts = {} },
 
       -- Allows extra capabilities provided by blink.cmp
       'saghen/blink.cmp',
@@ -945,7 +1025,6 @@ require('lazy').setup({
 
           -- Mapping to toggle LSP hover diagnostics (warnings) visibility
 
-
           -- The following code creates a keymap to toggle inlay hints in your
           -- code, if the language server you are using supports them
           --
@@ -1015,7 +1094,7 @@ require('lazy').setup({
             fieldalignment = true,
           },
 
-          hoverKind = "FullDocumentation",
+          hoverKind = 'FullDocumentation',
         },
         -- pyright = {},
         -- rust_analyzer = {},
@@ -1033,8 +1112,8 @@ require('lazy').setup({
           settings = {
             html = {
               format = {
-                enable = true,           -- Enable formatting
-                indentInnerHtml = true,  -- Indent <head> and <body> sections
+                enable = true, -- Enable formatting
+                indentInnerHtml = true, -- Indent <head> and <body> sections
                 wrapLineLength = 120,
                 wrapAttributes = 'auto', -- Options: 'auto', 'force', 'force-aligned', 'force-expand-multiline'
               },
@@ -1042,8 +1121,8 @@ require('lazy').setup({
           },
           configurationSection = { 'html', 'css', 'javascript' }, -- Specify configuration sections
           embeddedLanguages = {
-            css = true,                                           -- Enable embedded CSS support
-            javascript = true,                                    -- Enable embedded JavaScript support
+            css = true, -- Enable embedded CSS support
+            javascript = true, -- Enable embedded JavaScript support
           },
         },
 
@@ -1086,7 +1165,7 @@ require('lazy').setup({
         automatic_installation = false,
         handlers = {
           function(server_name)
-            if server_name == "rust_analyzer" then
+            if server_name == 'rust_analyzer' then
               return
             end
             local server = servers[server_name] or {}
@@ -1106,7 +1185,7 @@ require('lazy').setup({
       --     updateOnChange = false,
       --   },
       -- }
-    end
+    end,
   },
 
   { -- Autoformat
@@ -1151,49 +1230,47 @@ require('lazy').setup({
   },
 
   {
-    "lukas-reineke/indent-blankline.nvim",
-    main = "ibl",
+    'lukas-reineke/indent-blankline.nvim',
+    main = 'ibl',
     ---@module "ibl"
     ---@type ibl.config
     opts = {},
     config = function()
       local highlight = {
-        "RainbowRed",
-        "RainbowYellow",
-        "RainbowBlue",
-        "RainbowOrange",
-        "RainbowGreen",
-        "RainbowViolet",
-        "RainbowCyan",
+        'RainbowRed',
+        'RainbowYellow',
+        'RainbowBlue',
+        'RainbowOrange',
+        'RainbowGreen',
+        'RainbowViolet',
+        'RainbowCyan',
       }
 
-      local hooks = require "ibl.hooks"
+      local hooks = require 'ibl.hooks'
       -- create the highlight groups in the highlight setup hook, so they are reset
       -- every time the colorscheme changes
 
       hooks.register(hooks.type.HIGHLIGHT_SETUP, function()
-        vim.api.nvim_set_hl(0, "DeepMossGreen", { fg = "#2E4A34" }) -- Deep Moss Green
-        vim.api.nvim_set_hl(0, "FernGreen", { fg = "#385e40" })     -- Fern Green
-        vim.api.nvim_set_hl(0, "SlateTeal", { fg = "#3E6A70" })     -- Slate Teal
-        vim.api.nvim_set_hl(0, "DarkCerulean", { fg = "#3a7078" })  -- Dark Cerulean
-        vim.api.nvim_set_hl(0, "DeepSeaGreen", { fg = "#317a85" })  -- Deep Sea Green
-        vim.api.nvim_set_hl(0, "SteelTeal", { fg = "#2c8694" })     -- Steel Teal
-        vim.api.nvim_set_hl(0, "MoonstoneBlue", { fg = "#37abbd" }) -- Moonstone Blue
-        vim.api.nvim_set_hl(0, "ScopeGray", { fg = "#76c7c0" })     -- Neutral Gray for Scope
+        vim.api.nvim_set_hl(0, 'DeepMossGreen', { fg = '#2E4A34' }) -- Deep Moss Green
+        vim.api.nvim_set_hl(0, 'FernGreen', { fg = '#385e40' }) -- Fern Green
+        vim.api.nvim_set_hl(0, 'SlateTeal', { fg = '#3E6A70' }) -- Slate Teal
+        vim.api.nvim_set_hl(0, 'DarkCerulean', { fg = '#3a7078' }) -- Dark Cerulean
+        vim.api.nvim_set_hl(0, 'DeepSeaGreen', { fg = '#317a85' }) -- Deep Sea Green
+        vim.api.nvim_set_hl(0, 'SteelTeal', { fg = '#2c8694' }) -- Steel Teal
+        vim.api.nvim_set_hl(0, 'MoonstoneBlue', { fg = '#37abbd' }) -- Moonstone Blue
+        vim.api.nvim_set_hl(0, 'ScopeGray', { fg = '#76c7c0' }) -- Neutral Gray for Scope
       end)
 
-      require("ibl").setup {
-        indent = { highlight = { "DeepMossGreen", "FernGreen", "SlateTeal", "DarkCerulean", "DeepSeaGreen", "SteelTeal", "MoonstoneBlue" } },
-        scope = { highlight = { "ScopeGray" } } -- Scope lines in gray
+      require('ibl').setup {
+        indent = { highlight = { 'DeepMossGreen', 'FernGreen', 'SlateTeal', 'DarkCerulean', 'DeepSeaGreen', 'SteelTeal', 'MoonstoneBlue' } },
+        scope = { highlight = { 'ScopeGray' } }, -- Scope lines in gray
       }
-    end
-
+    end,
   },
   { -- Autocompletion
     'saghen/blink.cmp',
     event = 'VimEnter',
     version = '1.*',
-
 
     dependencies = {
       -- Snippet Engine
@@ -1254,17 +1331,14 @@ require('lazy').setup({
 
         -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
         --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
-
       },
 
       cmdline = { enabled = false },
-
 
       appearance = {
         -- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
         -- Adjusts spacing to ensure icons are aligned
         nerd_font_variant = 'normal',
-
       },
 
       completion = {
@@ -1274,7 +1348,7 @@ require('lazy').setup({
         keyword = { range = 'full' },
         -- Disable auto brackets
         -- NOTE: some LSPs may add auto brackets themselves anyway
-        accept = { auto_brackets = { enabled = false }, },
+        accept = { auto_brackets = { enabled = false } },
 
         -- Don't select by default, auto insert on selection
         -- Auto insert messes up your cursor
@@ -1291,10 +1365,10 @@ require('lazy').setup({
             treesitter = {},
 
             columns = {
-              { "label",     "label_description", gap = 1, max = 9999, },
-              { "kind_icon", "kind" }
+              { 'label', 'label_description', gap = 1, max = 9999 },
+              { 'kind_icon', 'kind' },
             },
-          }
+          },
         },
 
         documentation = {
@@ -1307,8 +1381,7 @@ require('lazy').setup({
           update_delay_ms = 50,
           -- Whether to use treesitter highlighting, disable if you run into performance issues
           treesitter_highlighting = true,
-        }
-
+        },
       },
 
       sources = {
@@ -1331,33 +1404,39 @@ require('lazy').setup({
 
       -- Shows a signature help window while you type arguments for a function
       signature = { enabled = true },
-
     },
   },
-
-  { -- You can easily change to a different colorscheme.
-    -- Change the name of the colorscheme plugin below, and then
-    -- change the command in the config to whatever the name of that colorscheme is.
-    --
-    -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-    'folke/tokyonight.nvim',
-    priority = 1000, -- Make sure to load this before all the other start plugins.
-
+  {
+    'scottmckendry/cyberdream.nvim',
     config = function()
-      ---@diagnostic disable-next-line: missing-fields
-      require('tokyonight').setup {
-        styles = {
-          comments = { italic = false }, -- Disable italics in comments
-        },
-      }
-
-      -- Load the colorscheme here.
-      -- Like many other themes, this one has different styles, and you could load
-      -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      -- Set the theme here
+      vim.cmd 'colorscheme cyberdream'
     end,
   },
-
+  --
+  -- { -- You can easily change to a different colorscheme.
+  --   -- Change the name of the colorscheme plugin below, and then
+  --   -- change the command in the config to whatever the name of that colorscheme is.
+  --   --
+  --   -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
+  --   'folke/tokyonight.nvim',
+  --   priority = 1000, -- Make sure to load this before all the other start plugins.
+  --
+  --   config = function()
+  --     ---@diagnostic disable-next-line: missing-fields
+  --     require('tokyonight').setup {
+  --       styles = {
+  --         comments = { italic = false }, -- Disable italics in comments
+  --       },
+  --     }
+  --
+  --     -- Load the colorscheme here.
+  --     -- Like many other themes, this one has different styles, and you could load
+  --     -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
+  --     -- vim.cmd.colorscheme 'tokyonight-night'
+  --   end,
+  -- },
+  --
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
 
@@ -1447,7 +1526,7 @@ require('lazy').setup({
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
   require 'kickstart.plugins.autopairs',

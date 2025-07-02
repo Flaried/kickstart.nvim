@@ -2,7 +2,7 @@
 --
 -- Shows how to use the DAP plugin to debug your code.
 --
--- Primarily focused on configuring the debugger for Go, but can
+-- Primarily focused on configuring the debugger for Go and Rust, but can
 -- be extended to other languages as well. That's why it's called
 -- kickstart.nvim and not kitchen-sink.nvim ;)
 
@@ -23,6 +23,9 @@ return {
 
     -- Add your own debuggers here
     'leoluz/nvim-dap-go',
+
+    -- Rust debugging support
+    'mrcjkb/rustaceanvim',
   },
   keys = {
     -- Basic debugging keymaps, feel free to change to your liking!
@@ -55,7 +58,7 @@ return {
       desc = 'Debug: Step Out',
     },
     {
-      '<leader>b',
+      '<leader>p',
       function()
         require('dap').toggle_breakpoint()
       end,
@@ -94,7 +97,8 @@ return {
       -- online, please don't ask me how to install them :)
       ensure_installed = {
         -- Update this to ensure that you have the debuggers for the langs you want
-        'delve',
+        'delve', -- Go debugger
+        'codelldb', -- Rust/C++ debugger
       },
     }
 
@@ -124,7 +128,7 @@ return {
     -- vim.api.nvim_set_hl(0, 'DapBreak', { fg = '#e51400' })
     -- vim.api.nvim_set_hl(0, 'DapStop', { fg = '#ffcc00' })
     -- local breakpoint_icons = vim.g.have_nerd_font
-    --     and { Breakpoint = '', BreakpointCondition = '', BreakpointRejected = '', LogPoint = '', Stopped = '' }
+    --     and { Breakpoint = '', BreakpointCondition = '', BreakpointRejected = '', LogPoint = '', Stopped = '' }
     --   or { Breakpoint = '●', BreakpointCondition = '⊜', BreakpointRejected = '⊘', LogPoint = '◆', Stopped = '⭔' }
     -- for type, icon in pairs(breakpoint_icons) do
     --   local tp = 'Dap' .. type
@@ -144,5 +148,108 @@ return {
         detached = vim.fn.has 'win32' == 0,
       },
     }
+
+    -- Rust DAP configuration
+    dap.adapters.codelldb = {
+      type = 'server',
+      port = '${port}',
+      executable = {
+        command = vim.fn.exepath 'codelldb',
+        args = { '--port', '${port}' },
+      },
+    }
+
+    dap.configurations.rust = {
+      {
+        name = 'Launch',
+        type = 'codelldb',
+        request = 'launch',
+        program = function()
+          -- First try to find the binary in target/debug/
+          local cwd = vim.fn.getcwd()
+          local cargo_toml = cwd .. '/Cargo.toml'
+
+          if vim.fn.filereadable(cargo_toml) == 1 then
+            -- Parse Cargo.toml to get the package name
+            local cargo_content = vim.fn.readfile(cargo_toml)
+            local package_name = nil
+
+            for _, line in ipairs(cargo_content) do
+              local name_match = string.match(line, '^name%s*=%s*["\']([^"\']+)["\']')
+              if name_match then
+                package_name = name_match
+                break
+              end
+            end
+
+            if package_name then
+              local debug_binary = cwd .. '/target/debug/' .. package_name
+              if vim.fn.executable(debug_binary) == 1 then
+                return debug_binary
+              end
+            end
+          end
+
+          -- Fallback to file picker
+          return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/target/debug/', 'file')
+        end,
+        cwd = '${workspaceFolder}',
+        stopOnEntry = false,
+        args = {},
+      },
+      {
+        name = 'Launch with args',
+        type = 'codelldb',
+        request = 'launch',
+        program = function()
+          local cwd = vim.fn.getcwd()
+          local cargo_toml = cwd .. '/Cargo.toml'
+
+          if vim.fn.filereadable(cargo_toml) == 1 then
+            local cargo_content = vim.fn.readfile(cargo_toml)
+            local package_name = nil
+
+            for _, line in ipairs(cargo_content) do
+              local name_match = string.match(line, '^name%s*=%s*["\']([^"\']+)["\']')
+              if name_match then
+                package_name = name_match
+                break
+              end
+            end
+
+            if package_name then
+              local debug_binary = cwd .. '/target/debug/' .. package_name
+              if vim.fn.executable(debug_binary) == 1 then
+                return debug_binary
+              end
+            end
+          end
+
+          return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/target/debug/', 'file')
+        end,
+        cwd = '${workspaceFolder}',
+        stopOnEntry = false,
+        args = function()
+          local args_string = vim.fn.input 'Arguments: '
+          return vim.split(args_string, ' ')
+        end,
+      },
+    }
+
+    -- Auto-compile Rust project before debugging
+    vim.api.nvim_create_user_command('RustDebugBuild', function()
+      vim.fn.system 'cargo build'
+      if vim.v.shell_error == 0 then
+        print 'Rust project built successfully'
+      else
+        print 'Rust build failed'
+      end
+    end, {})
+
+    -- Keybinding to build and debug Rust
+    vim.keymap.set('n', '<leader>rd', function()
+      vim.cmd 'RustDebugBuild'
+      require('dap').continue()
+    end, { desc = 'Build and Debug Rust' })
   end,
 }

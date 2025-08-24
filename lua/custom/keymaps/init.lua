@@ -6,7 +6,7 @@ function Keymaps.setup()
   -- Diagnostic keymaps
   vim.keymap.set('n', '<leader>e', vim.diagnostic.setloclist, { desc = 'Open diagnostic [E]rrors list' })
 
-  vim.keymap.set('n', '<C-h>', vim.lsp.buf.hover, bufopts)
+  vim.keymap.set('n', '<leader>h', vim.lsp.buf.hover, bufopts)
 end
 
 return Keymaps
